@@ -26,7 +26,6 @@ const size = { width: 0, height: 0, radiusY: 0, hitRadius: 0 };
 let track = [];
 let trackLength = 0;
 
-
 function makeTrack() {
   const radiusX = Math.max(0, Math.min(323, size.width / 2 - size.hitRadius - 6));
   size.radiusY = Math.max(0, Math.min(220, size.height / 2 - size.hitRadius - 10));
@@ -42,18 +41,8 @@ function makeTrack() {
   }
 }
 
-function destination(bubble) {
-  if (bubble.placement) {
-    const { x, y, angle } = bubble.placement;
-    const a = angle + bubble.progress * Math.PI * 2;
-    const radiusX = 13 + 1.8 * bubble.index;
-    const radiusY = 9 + 1.2 * bubble.index;
-    return {
-      x: x + radiusX * (Math.cos(a) - Math.cos(angle)),
-      y: y + radiusY * (Math.sin(a) - Math.sin(angle)),
-    };
-  }
-  const distance = ((bubble.progress + bubble.phase) % 1) * trackLength;
+function destination(bubble, progress = bubble.progress) {
+  const distance = progress * trackLength;
   let left = 0;
   let right = track.length - 1;
   while (right - left > 1) {
@@ -76,9 +65,7 @@ function render(bubble) {
   link.style.setProperty('--y', `${y.toFixed(2)}px`);
   const depth = Math.max(-1, Math.min(1, y / (size.radiusY || 1)));
   link.style.setProperty('--orbit-depth', motion.matches ? '1' : String(0.97 + 0.03 * depth));
-  const limit = Math.max(0, (size.width - bubble.labelWidth) / 2);
-  const labelX = Math.max(-limit, Math.min(limit, x));
-  link.style.setProperty('--label-shift', `${(labelX - x).toFixed(2)}px`);
+  link.classList.toggle('preview-left', x > 0);
 }
 
 function offsetAt(offset, velocity, time) {
@@ -86,26 +73,41 @@ function offsetAt(offset, velocity, time) {
   return (offset + (velocity + springRate * offset) * time) * Math.exp(-springRate * time);
 }
 
-function choosePlacement(bubble) {
-  const clearance = Math.max(36, size.hitRadius * 1.65);
-  const free = (x, y) => bubbles.every(other => other === bubble ||
-    Math.hypot(x - other.x, y - other.y) >= clearance);
-  const inside = (x, y) => Math.abs(x) <= size.width / 2 && Math.abs(y) <= size.height / 2;
-  const atDrop = { x: bubble.x, y: bubble.y, angle: bubble.x < 0 ? Math.PI : 0 };
-  if (free(atDrop.x, atDrop.y)) return atDrop;
-
-  // Look just around the drop point if another link already occupies it.
-  for (const radius of [clearance / 2, clearance]) {
-    for (let direction = 0; direction < 8; direction++) {
-      const a = direction * Math.PI / 4;
-      const x = atDrop.x + radius * Math.cos(a);
-      const y = atDrop.y + radius * Math.sin(a);
-      if (free(x, y) && (!inside(atDrop.x, atDrop.y) || inside(x, y))) {
-        return { x, y, angle: x < 0 ? Math.PI : 0 };
-      }
+function nearestOrbitProgress(bubble) {
+  if (trackLength === 0) return bubble.progress;
+  // Project the drop point onto each segment of this icon's ellipse.
+  const x = bubble.x / bubble.radius;
+  const y = bubble.y / bubble.radius;
+  let bestDistance = Infinity;
+  let bestProgress = bubble.progress;
+  for (let i = 1; i < track.length; i++) {
+    const from = track[i - 1];
+    const to = track[i];
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const lengthSquared = dx * dx + dy * dy;
+    if (!lengthSquared) continue;
+    const fraction = Math.max(0, Math.min(1, ((x - from.x) * dx + (y - from.y) * dy) / lengthSquared));
+    const distance = Math.hypot(x - from.x - dx * fraction, y - from.y - dy * fraction);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestProgress = (from.distance + fraction * (to.distance - from.distance)) / trackLength;
     }
   }
-  return atDrop;
+  bestProgress %= 1;
+  const clearance = size.hitRadius * 1.65;
+  const step = Math.min(0.025, 10 / trackLength);
+  // If another link occupies the closest point, take the first clear point on either side.
+  for (let offset = 0; offset < 0.5; offset += step) {
+    const candidates = offset ? [bestProgress + offset, bestProgress - offset] : [bestProgress];
+    for (const candidate of candidates) {
+      const progress = (candidate + 1) % 1;
+      const point = destination(bubble, progress);
+      if (bubbles.every(other => other === bubble ||
+          Math.hypot(point.x - other.x, point.y - other.y) >= clearance)) return progress;
+    }
+  }
+  return bestProgress;
 }
 
 function rejoin(bubble, target, vx = 0, vy = 0) {
@@ -120,16 +122,16 @@ const bubbles = cards.map((card, index) => {
   }
   link.draggable = false;
 
-  const label = document.createElement('span');
-  label.className = 'orbit-label';
-  label.setAttribute('aria-hidden', 'true');
-  label.textContent = card.querySelector('strong').textContent;
-  link.append(card.querySelector('.link-icon').cloneNode(true), label);
+  const preview = document.createElement('span');
+  preview.className = 'orbit-preview';
+  preview.setAttribute('aria-hidden', 'true');
+  preview.append(card.querySelector('.link-copy').cloneNode(true));
+  link.append(card.querySelector('.link-icon').cloneNode(true), preview);
   navigation.append(link);
 
   const bubble = {
-    link, label, index, phase: index / cards.length, progress: 0,
-    radius: 0.89 + 0.11 * index / Math.max(cards.length - 1, 1), placement: null,
+    link, progress: index / cards.length,
+    radius: 0.89 + 0.11 * index / Math.max(cards.length - 1, 1),
     x: 0, y: 0, pointer: null, returning: null, held: false, blockClick: false,
   };
   link.addEventListener('pointerdown', (event) => {
@@ -171,8 +173,7 @@ const bubbles = cards.map((card, index) => {
     bubble.pointer = null;
     link.classList.remove('is-dragging');
     if (pointer.moved) {
-      bubble.placement = choosePlacement(bubble);
-      bubble.progress = 0;
+      bubble.progress = nearestOrbitProgress(bubble);
       bubble.held = false;
     }
     const target = destination(bubble);
@@ -196,19 +197,12 @@ const bubbles = cards.map((card, index) => {
 });
 
 function measure() {
-  const previousWidth = size.width;
-  const previousHeight = size.height;
   size.width = stage.clientWidth;
   size.height = stage.clientHeight;
   size.hitRadius = (bubbles[0]?.link.offsetWidth || 0) / 2;
   makeTrack();
   for (const bubble of bubbles) {
-    bubble.labelWidth = bubble.label.offsetWidth;
     if (!bubble.pointer) {
-      if (bubble.placement && previousWidth && previousHeight) {
-        bubble.placement.x *= size.width / previousWidth;
-        bubble.placement.y *= size.height / previousHeight;
-      }
       bubble.returning = null;
       Object.assign(bubble, destination(bubble));
     }
@@ -240,8 +234,7 @@ function animate(time) {
       bubble.returning = null;
       continue;
     }
-    const period = bubble.placement ? 4200 + 260 * bubble.index : orbitPeriod;
-    bubble.progress = (bubble.progress + elapsed / period) % 1;
+    bubble.progress = (bubble.progress + elapsed / orbitPeriod) % 1;
     const target = destination(bubble);
     if (bubble.held && !bubble.returning) rejoin(bubble, target);
     bubble.held = false;
