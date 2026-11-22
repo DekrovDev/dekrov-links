@@ -1,6 +1,8 @@
 const cards = Array.from(document.querySelectorAll('.link-card'));
 const stage = document.querySelector('#orbit-stage');
 const navigation = document.querySelector('#orbit-links');
+const guides = document.querySelector('#orbit-guides');
+const identity = stage.querySelector('.identity');
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 
 if ('IntersectionObserver' in window && !motion.matches) {
@@ -19,29 +21,27 @@ if ('IntersectionObserver' in window && !motion.matches) {
   }
 }
 
-const orbitPeriod = 32000;
-const springRate = 0.011;
+const springRate = 0.0058;
+const returnDuration = 1600;
 const canHover = matchMedia('(any-hover: hover)');
-const size = { width: 0, height: 0, radiusY: 0, hitRadius: 0 };
-let track = [];
-let trackLength = 0;
+let hitRadius = 0;
 
-function makeTrack() {
-  const radiusX = Math.max(0, Math.min(323, size.width / 2 - size.hitRadius - 6));
-  size.radiusY = Math.max(0, Math.min(220, size.height / 2 - size.hitRadius - 10));
-  trackLength = 0;
-  track = [];
+function makeTrack(radiusX, radiusY) {
+  let length = 0;
+  const points = [];
   for (let step = 0; step <= 180; step++) {
     const angle = 2 * Math.PI * step / 180 - Math.PI / 2;
     const x = radiusX * Math.cos(angle);
-    const y = size.radiusY * Math.sin(angle);
-    const previous = track[step - 1];
-    if (previous) trackLength += Math.hypot(x - previous.x, y - previous.y);
-    track.push({ x, y, distance: trackLength });
+    const y = radiusY * Math.sin(angle);
+    const previous = points[step - 1];
+    if (previous) length += Math.hypot(x - previous.x, y - previous.y);
+    points.push({ x, y, distance: length });
   }
+  return { points, length, radiusY };
 }
 
 function destination(bubble, progress = bubble.progress) {
+  const { points: track, length: trackLength } = bubble.track;
   const distance = progress * trackLength;
   let left = 0;
   let right = track.length - 1;
@@ -54,8 +54,8 @@ function destination(bubble, progress = bubble.progress) {
   const to = track[right];
   const amount = (distance - from.distance) / (to.distance - from.distance || 1);
   return {
-    x: (from.x + (to.x - from.x) * amount) * bubble.radius,
-    y: (from.y + (to.y - from.y) * amount) * bubble.radius,
+    x: from.x + (to.x - from.x) * amount,
+    y: from.y + (to.y - from.y) * amount,
   };
 }
 
@@ -63,7 +63,7 @@ function render(bubble) {
   const { link, x, y } = bubble;
   link.style.setProperty('--x', `${x.toFixed(2)}px`);
   link.style.setProperty('--y', `${y.toFixed(2)}px`);
-  const depth = Math.max(-1, Math.min(1, y / (size.radiusY || 1)));
+  const depth = Math.max(-1, Math.min(1, y / (bubble.track.radiusY || 1)));
   link.style.setProperty('--orbit-depth', motion.matches ? '1' : String(0.97 + 0.03 * depth));
   link.classList.toggle('preview-left', x > 0);
 }
@@ -74,10 +74,10 @@ function offsetAt(offset, velocity, time) {
 }
 
 function nearestOrbitProgress(bubble) {
+  const { points: track, length: trackLength } = bubble.track;
   if (trackLength === 0) return bubble.progress;
   // Project the drop point onto each segment of this icon's ellipse.
-  const x = bubble.x / bubble.radius;
-  const y = bubble.y / bubble.radius;
+  const { x, y } = bubble;
   let bestDistance = Infinity;
   let bestProgress = bubble.progress;
   for (let i = 1; i < track.length; i++) {
@@ -95,7 +95,7 @@ function nearestOrbitProgress(bubble) {
     }
   }
   bestProgress %= 1;
-  const clearance = size.hitRadius * 1.65;
+  const clearance = hitRadius * 1.65;
   const step = Math.min(0.025, 10 / trackLength);
   // If another link occupies the closest point, take the first clear point on either side.
   for (let offset = 0; offset < 0.5; offset += step) {
@@ -129,9 +129,13 @@ const bubbles = cards.map((card, index) => {
   link.append(card.querySelector('.link-icon').cloneNode(true), preview);
   navigation.append(link);
 
+  const guide = document.createElement('span');
+  guide.className = 'orbit-guide';
+  guides.append(guide);
+
   const bubble = {
-    link, progress: index / cards.length,
-    radius: 0.89 + 0.11 * index / Math.max(cards.length - 1, 1),
+    link, guide, progress: index / cards.length,
+    spacing: index / Math.max(cards.length - 1, 1), period: 24000 + 3400 * index,
     x: 0, y: 0, pointer: null, returning: null, held: false, blockClick: false,
   };
   link.addEventListener('pointerdown', (event) => {
@@ -182,7 +186,7 @@ const bubbles = cards.map((card, index) => {
       Object.assign(bubble, target);
       render(bubble);
     } else if (pointer.moved) {
-      rejoin(bubble, target, flick ? pointer.vx : 0, flick ? pointer.vy : 0);
+      rejoin(bubble, target, flick ? pointer.vx * 0.55 : 0, flick ? pointer.vy * 0.55 : 0);
     } else {
       bubble.held = true;
     }
@@ -197,11 +201,17 @@ const bubbles = cards.map((card, index) => {
 });
 
 function measure() {
-  size.width = stage.clientWidth;
-  size.height = stage.clientHeight;
-  size.hitRadius = (bubbles[0]?.link.offsetWidth || 0) / 2;
-  makeTrack();
+  hitRadius = (bubbles[0]?.link.offsetWidth || 0) / 2;
+  const outerX = Math.max(0, Math.min(385, stage.clientWidth / 2 - hitRadius - 7));
+  const outerY = Math.max(0, Math.min(248, stage.clientHeight / 2 - hitRadius - 8));
+  const innerX = Math.min(outerX * 0.85, Math.max(outerX * 0.61, identity.offsetWidth / 2 + hitRadius + 12));
+  const innerY = Math.min(outerY * 0.82, Math.max(outerY * 0.58, identity.offsetHeight / 2 + hitRadius + 12));
   for (const bubble of bubbles) {
+    const radiusX = innerX + (outerX - innerX) * bubble.spacing;
+    const radiusY = innerY + (outerY - innerY) * bubble.spacing;
+    bubble.track = makeTrack(radiusX, radiusY);
+    bubble.guide.style.width = `${radiusX * 2}px`;
+    bubble.guide.style.height = `${radiusY * 2}px`;
     if (!bubble.pointer) {
       bubble.returning = null;
       Object.assign(bubble, destination(bubble));
@@ -234,7 +244,7 @@ function animate(time) {
       bubble.returning = null;
       continue;
     }
-    bubble.progress = (bubble.progress + elapsed / orbitPeriod) % 1;
+    bubble.progress = (bubble.progress + elapsed / bubble.period) % 1;
     const target = destination(bubble);
     if (bubble.held && !bubble.returning) rejoin(bubble, target);
     bubble.held = false;
@@ -244,7 +254,7 @@ function animate(time) {
       flight.time += elapsed;
       bubble.x = target.x + offsetAt(flight.x, flight.vx, flight.time);
       bubble.y = target.y + offsetAt(flight.y, flight.vy, flight.time);
-      if (flight.time >= 1000) {
+      if (flight.time >= returnDuration) {
         bubble.returning = null;
         Object.assign(bubble, target);
       }
