@@ -71,13 +71,6 @@ function render(bubble) {
   link.classList.toggle('preview-left', x > 0);
 }
 
-function returnScale(time) {
-  // A damped spring starting at rest briefly overshoots the orbit before settling.
-  const phase = springFrequency * time;
-  return Math.exp(-springDecay * time) *
-    (Math.cos(phase) + (springDecay / springFrequency) * Math.sin(phase));
-}
-
 function nearestOrbitProgress(bubble) {
   const { points: track, length: trackLength } = bubble.track;
   if (trackLength === 0) return bubble.progress;
@@ -115,8 +108,23 @@ function nearestOrbitProgress(bubble) {
   return bestProgress;
 }
 
-function rejoin(bubble, target) {
-  bubble.returning = { x: bubble.x - target.x, y: bubble.y - target.y, time: 0 };
+function rejoin(bubble, target, releaseVelocity) {
+  const x = bubble.x - target.x;
+  const y = bubble.y - target.y;
+  let vx = 0;
+  let vy = 0;
+  if (releaseVelocity) {
+    const sampleTime = 16;
+    const next = destination(bubble, (bubble.progress + sampleTime / orbitPeriod) % 1);
+    // The spring uses coordinates relative to a point that keeps moving along the orbit.
+    vx = releaseVelocity.x - (next.x - target.x) / sampleTime;
+    vy = releaseVelocity.y - (next.y - target.y) / sampleTime;
+  }
+  bubble.returning = {
+    x, y, time: 0,
+    swingX: (vx + springDecay * x) / springFrequency,
+    swingY: (vy + springDecay * y) / springFrequency,
+  };
 }
 
 const bubbles = cards.map((card, index) => {
@@ -143,7 +151,10 @@ const bubbles = cards.map((card, index) => {
     if (event.button !== 0 || !event.isPrimary || bubble.pointer) return;
     bubble.blockClick = false;
     bubble.returning = null;
-    bubble.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+    bubble.pointer = {
+      id: event.pointerId, x: event.clientX, y: event.clientY,
+      time: event.timeStamp, vx: 0, vy: 0, moved: false,
+    };
     link.setPointerCapture(event.pointerId);
   });
   link.addEventListener('pointermove', (event) => {
@@ -162,6 +173,11 @@ const bubbles = cards.map((card, index) => {
 
     const x = bubble.x + dx;
     const y = bubble.y + dy;
+    const elapsed = Math.max(10, event.timeStamp - pointer.time);
+    const blend = 1 - Math.exp(-elapsed / 27);
+    pointer.vx += (dx / elapsed - pointer.vx) * blend;
+    pointer.vy += (dy / elapsed - pointer.vy) * blend;
+    pointer.time = event.timeStamp;
     pointer.x = event.clientX;
     pointer.y = event.clientY;
     Object.assign(bubble, { x, y });
@@ -185,7 +201,12 @@ const bubbles = cards.map((card, index) => {
       Object.assign(bubble, target);
       render(bubble);
     } else {
-      rejoin(bubble, target);
+      const age = Math.max(0, event.timeStamp - pointer.time);
+      const speed = Math.hypot(pointer.vx, pointer.vy);
+      const carry = event.type === 'pointerup' && age < 100 && speed > 0
+        ? Math.min(1.55 / speed, Math.exp(-age / 40))
+        : 0;
+      rejoin(bubble, target, { x: pointer.vx * carry, y: pointer.vy * carry });
       spreadPending = true;
     }
   }
@@ -270,9 +291,12 @@ function animate(time) {
     if (bubble.returning) {
       const flight = bubble.returning;
       flight.time += elapsed;
-      const scale = returnScale(flight.time);
-      bubble.x = target.x + flight.x * scale;
-      bubble.y = target.y + flight.y * scale;
+      const phase = springFrequency * flight.time;
+      const decay = Math.exp(-springDecay * flight.time);
+      const cos = Math.cos(phase);
+      const sin = Math.sin(phase);
+      bubble.x = target.x + decay * (flight.x * cos + flight.swingX * sin);
+      bubble.y = target.y + decay * (flight.y * cos + flight.swingY * sin);
       if (flight.time >= returnDuration) {
         bubble.returning = null;
         Object.assign(bubble, target);
