@@ -58,8 +58,9 @@ h1 {
 .directory-jump span { color:#a3a3a3; font-size:15px; }
 .orbit-links { position:absolute; inset:0; pointer-events:none; }
 .orbit-link {
+  --orbit-icon-size:clamp(54px, 7vw, 66px);
   position:absolute; top:50%; left:50%; display:grid; place-items:center;
-  width:clamp(44px, 5.2vw, 61px); aspect-ratio:1; border-radius:50%;
+  width:calc(var(--orbit-icon-size) + 6px); aspect-ratio:1; border-radius:50%;
   transform:translate3d(var(--x, 0px), var(--y, 0px), 0) translate(-50%, -50%);
   pointer-events:auto; touch-action:none; user-select:none; -webkit-user-select:none;
   -webkit-user-drag:none; cursor:grab;
@@ -71,6 +72,7 @@ h1 {
 .orbit-link .link-icon {
   width:100%; height:100%; pointer-events:none;
 }
+.orbit-link .link-icon img { width:var(--orbit-icon-size); height:auto; }
 .orbit-label {
   position:absolute; top:calc(100% + 9px);
   left:calc(50% + var(--label-shift, 0px)); transform:translate(-50%, -3px);
