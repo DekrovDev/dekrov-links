@@ -61,24 +61,20 @@ h1 {
   position:absolute; top:50%; left:50%; display:grid; place-items:center;
   width:clamp(44px, 5.2vw, 61px); aspect-ratio:1; border-radius:50%;
   transform:translate3d(var(--x, 0px), var(--y, 0px), 0) translate(-50%, -50%);
-  border:1px solid #272727; background:#141414; color:#aaa;
-  box-shadow:0 8px 24px #0007;
   pointer-events:auto; touch-action:none; user-select:none; -webkit-user-select:none;
   -webkit-user-drag:none; cursor:grab;
-  transition:background .2s, border-color .2s, color .2s;
 }
 .orbit-link:hover,.orbit-link:focus-visible,.orbit-link.is-dragging {
-  z-index:2; color:#f1f1f1; background:#242424; border-color:#575757;
+  z-index:2;
 }
 .orbit-link.is-dragging { cursor:grabbing; }
 .orbit-link .link-icon {
-  width:100%; height:100%; border:0; border-radius:50%; background:none;
-  color:inherit; pointer-events:none;
+  width:100%; height:100%; pointer-events:none;
 }
 .orbit-label {
   position:absolute; top:calc(100% + 9px);
   left:calc(50% + var(--label-shift, 0px)); transform:translate(-50%, -3px);
-  padding:6px 9px; border:1px solid #353535; border-radius:7px;
+  padding:6px 9px; border-radius:7px;
   color:#f0f0ef; background:#191919; box-shadow:0 5px 16px #0008;
   white-space:nowrap; font-size:11px; opacity:0; pointer-events:none;
   transition:opacity .15s, transform .15s;
@@ -127,6 +123,7 @@ h1 {
   grid-area:1 / 1; display:block;
   transition:opacity .28s ease, scale .42s cubic-bezier(.2,1.22,.36,1);
 }
+.icon-default { filter:brightness(1.65); }
 .icon-hover { opacity:0; scale:.82; }
 .link-card:is(:hover,:focus-visible) .icon-default,
 .orbit-link:not(.is-dragging):is(:hover,:focus-visible) .icon-default {
