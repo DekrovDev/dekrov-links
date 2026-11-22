@@ -120,13 +120,22 @@ h1 {
 .link-card:hover::before { opacity:1; }
 .link-card:active { transform:translateY(0) scale(.997); }
 .link-icon {
-  flex:0 0 45px; height:45px; border-radius:9px;
-  display:flex; align-items:center; justify-content:center;
-  color:#e9e9e9; background:rgba(255,255,255,.055);
-  border:1px solid rgba(255,255,255,.10);
+  flex:0 0 45px; height:45px;
+  display:grid; place-items:center;
 }
-.link-icon svg { width:21px; height:21px; display:block; }
-.link-icon-letter { font-size:25px; font-weight:500; }
+.link-icon img {
+  grid-area:1 / 1; display:block;
+  transition:opacity .28s ease, scale .42s cubic-bezier(.2,1.22,.36,1);
+}
+.icon-hover { opacity:0; scale:.82; }
+.link-card:is(:hover,:focus-visible) .icon-default,
+.orbit-link:not(.is-dragging):is(:hover,:focus-visible) .icon-default {
+  opacity:0; scale:.89;
+}
+.link-card:is(:hover,:focus-visible) .icon-hover,
+.orbit-link:not(.is-dragging):is(:hover,:focus-visible) .icon-hover {
+  opacity:1; scale:1;
+}
 .link-copy { flex:1; min-width:0; position:relative; display:flex; flex-direction:column; gap:5px; }
 .link-copy strong {
   color:#f2f2f2; font-size:15px; font-weight:650;
@@ -137,16 +146,11 @@ h1 {
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .link-action {
-  flex:0 0 35px; height:35px; border:1px solid rgba(255,255,255,.13);
-  border-radius:50%; display:flex; align-items:center; justify-content:center;
-  font-size:18px; font-weight:300; color:#969696;
-  transition:color .25s var(--ease),border-color .25s var(--ease),
-             transform .25s var(--ease),background .25s var(--ease);
+  flex:0 0 35px; height:35px; display:grid; place-items:center;
+  transition:transform .25s var(--ease);
 }
-.link-card:hover .link-action {
-  color:#fff; border-color:rgba(255,255,255,.48); background:rgba(255,255,255,.08);
-  transform:translate(2px,-2px);
-}
+.link-action img { display:block; }
+.link-card:hover .link-action { transform:translate(2px,-2px); }
 .footer {
   border-top:1px solid var(--hairline); color:#909090; display:flex;
   align-items:center; min-height:68px; font-size:10px; letter-spacing:.14em;
@@ -161,6 +165,6 @@ h1 {
 }
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }
-  .orbit-link,.orbit-label,.link-card,.reveal-item { transition:none; }
+  .orbit-link,.orbit-label,.link-card,.link-icon img,.reveal-item { transition:none; }
   .reveal-item { opacity:1; translate:none; }
 }

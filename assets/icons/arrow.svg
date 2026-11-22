@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 24 24">
+  <defs>
+    <clipPath id="clip0">
+      <rect width="24" height="24"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#clip0)">
+    <g transform="translate(3, 3)">
+      <path d="M18 10L18 16C18 16.53 17.79 17.04 17.41 17.41C17.04 17.79 16.53 18 16 18L2 18C1.47 18 0.96 17.79 0.59 17.41C0.21 17.04 0 16.53 0 16L0 2C0 1.47 0.21 0.96 0.59 0.59C0.96 0.21 1.47 0 2 0L8 0" fill="none" stroke="#343434" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 10C19 9.45 18.55 9 18 9C17.45 9 17 9.45 17 10L18 10L19 10ZM0 16L-1 16L0 16ZM2 0L2 -1L2 0ZM8 1C8.55 1 9 0.55 9 0C9 -0.55 8.55 -1 8 -1L8 0L8 1ZM18 10L17 10L17 16L18 16L19 16L19 10L18 10ZM18 16L17 16C17 16.27 16.89 16.52 16.71 16.71L17.41 17.41L18.12 18.12C18.68 17.56 19 16.8 19 16L18 16ZM17.41 17.41L16.71 16.71C16.52 16.89 16.27 17 16 17L16 18L16 19C16.8 19 17.56 18.68 18.12 18.12L17.41 17.41ZM16 18L16 17L2 17L2 18L2 19L16 19L16 18ZM2 18L2 17C1.73 17 1.48 16.89 1.29 16.71L0.59 17.41L-0.12 18.12C0.44 18.68 1.2 19 2 19L2 18ZM0.59 17.41L1.29 16.71C1.11 16.52 1 16.27 1 16L0 16L-1 16C-1 16.8 -0.68 17.56 -0.12 18.12L0.59 17.41ZM0 16L1 16L1 2L0 2L-1 2L-1 16L0 16ZM0 2L1 2C1 1.73 1.11 1.48 1.29 1.29L0.59 0.59L-0.12 -0.12C-0.68 0.44 -1 1.2 -1 2L0 2ZM0.59 0.59L1.29 1.29C1.48 1.11 1.73 1 2 1L2 0L2 -1C1.2 -1 0.44 -0.68 -0.12 -0.12L0.59 0.59ZM2 0L2 1L8 1L8 0L8 -1L2 -1L2 0Z" fill="#343434" stroke="none"/>
+    </g>
+    <g transform="translate(12, 3)">
+      <path d="M9 0L0 9" fill="none" stroke="#343434" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9.71 0.71C10.1 0.32 10.1 -0.32 9.71 -0.71C9.32 -1.1 8.68 -1.1 8.29 -0.71L9 0L9.71 0.71ZM-0.71 8.29C-1.1 8.68 -1.1 9.32 -0.71 9.71C-0.32 10.1 0.32 10.1 0.71 9.71L0 9L-0.71 8.29ZM9 0L8.29 -0.71L-0.71 8.29L0 9L0.71 9.71L9.71 0.71L9 0Z" fill="#343434" stroke="none"/>
+    </g>
+    <g transform="translate(15, 3)">
+      <path d="M0 0L6 0L6 6" fill="none" stroke="#343434" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M0 -1C-0.55 -1 -1 -0.55 -1 0C-1 0.55 -0.55 1 0 1L0 0L0 -1ZM6 0L7 0C7 -0.55 6.55 -1 6 -1L6 0ZM5 6C5 6.55 5.45 7 6 7C6.55 7 7 6.55 7 6L6 6L5 6ZM0 0L0 1L6 1L6 0L6 -1L0 -1L0 0ZM6 0L5 0L5 6L6 6L7 6L7 0L6 0Z" fill="#343434" stroke="none"/>
+    </g>
+  </g>
+</svg>
