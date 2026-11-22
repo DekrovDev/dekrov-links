@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101014">
+  <meta name="robots" content="noindex">
+  <title>Dekrov Links Lab</title>
+  <link rel="icon" href="../assets/dekrov.webp">
+  <link rel="stylesheet" href="lab.css">
+  <script src="lab.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="../"><img src="../assets/dekrov.webp" width="34" height="34" alt=""><span>DEKROV <small>LINKS LAB</small></span></a>
+    <div class="actions">
+      <button id="import" type="button">Импорт</button>
+      <input id="file" type="file" accept=".json,application/json" hidden>
+      <button class="primary" id="export" type="button">Скачать настройки</button>
+    </div>
+  </header>
+  <main class="workspace">
+    <aside class="settings" aria-labelledby="settings-title">
+      <div class="sidebar-heading">
+        <div><h1 id="settings-title">Настройки</h1><p>Перетащи значок в превью и отпусти.</p></div>
+        <button id="reset" class="quiet" type="button">Сбросить</button>
+      </div>
+      <form id="controls"></form>
+      <p class="status" id="status" role="status">Настройки сохраняются в этом браузере.</p>
+    </aside>
+    <section class="stage" aria-label="Предпросмотр сайта">
+      <header class="stage-toolbar">
+        <span>Предпросмотр</span>
+        <div class="devices" aria-label="Размер экрана">
+          <button type="button" data-device="desktop" aria-pressed="true">Десктоп</button>
+          <button type="button" data-device="mobile" aria-pressed="false">Телефон</button>
+        </div>
+      </header>
+      <div id="screen" class="screen">
+        <p id="preview-status" class="preview-status" role="status">Загружаю сайт…</p>
+        <iframe id="preview" title="Живой предпросмотр Dekrov Links" hidden></iframe>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

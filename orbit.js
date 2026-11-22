@@ -20,11 +20,12 @@ if ('IntersectionObserver' in window && !motion.matches) {
   }
 }
 
-const orbitPeriod = 32000;
-const spreadDuration = 26000;
-const springDecay = 0.0046;
-const springFrequency = 0.0058;
-const returnDuration = 1800;
+const orbitSettings = {
+  orbitPeriod: 32000, spreadDuration: 26000, springDecay: 0.0046,
+  springFrequency: 0.0058, returnDuration: 1800, throwGain: 1.16,
+  throwCap: 1.55, radiusX: 385, radiusY: 248, ringGap: 1, depth: 0.06,
+  direction: 1, holdOnHover: true,
+};
 const canHover = matchMedia('(any-hover: hover)');
 let hitRadius = 0;
 let spreadPending = false;
@@ -67,7 +68,7 @@ function render(bubble) {
   link.style.setProperty('--x', `${x.toFixed(2)}px`);
   link.style.setProperty('--y', `${y.toFixed(2)}px`);
   const depth = Math.max(-1, Math.min(1, y / (bubble.track.radiusY || 1)));
-  link.style.setProperty('--orbit-depth', motion.matches ? '1' : String(0.97 + 0.03 * depth));
+  link.style.setProperty('--orbit-depth', motion.matches ? '1' : String(1 - orbitSettings.depth * (1 - depth) / 2));
   link.classList.toggle('preview-left', x > 0);
 }
 
@@ -115,13 +116,14 @@ function rejoin(bubble, target, releaseVelocity) {
   let vy = 0;
   if (releaseVelocity) {
     const sampleTime = 16;
-    const next = destination(bubble, (bubble.progress + sampleTime / orbitPeriod) % 1);
+    const next = destination(bubble, (bubble.progress + sampleTime * orbitSettings.direction / orbitSettings.orbitPeriod) % 1);
     // The spring uses coordinates relative to a point that keeps moving along the orbit.
     vx = releaseVelocity.x - (next.x - target.x) / sampleTime;
     vy = releaseVelocity.y - (next.y - target.y) / sampleTime;
   }
+  const { springDecay, springFrequency, returnDuration } = orbitSettings;
   bubble.returning = {
-    x, y, time: 0,
+    x, y, time: 0, springDecay, springFrequency, returnDuration,
     swingX: (vx + springDecay * x) / springFrequency,
     swingY: (vy + springDecay * y) / springFrequency,
   };
@@ -204,7 +206,7 @@ const bubbles = cards.map((card, index) => {
       const age = Math.max(0, event.timeStamp - pointer.time);
       const speed = Math.hypot(pointer.vx, pointer.vy);
       const carry = event.type === 'pointerup' && age < 100 && speed > 0
-        ? 1.16 * Math.min(1.55 / speed, Math.exp(-age / 40))
+        ? orbitSettings.throwGain * Math.min(orbitSettings.throwCap / speed, Math.exp(-age / 40))
         : 0;
       rejoin(bubble, target, { x: pointer.vx * carry, y: pointer.vy * carry });
       spreadPending = true;
@@ -221,13 +223,13 @@ const bubbles = cards.map((card, index) => {
 
 function measure() {
   hitRadius = (bubbles[0]?.link.offsetWidth || 0) / 2;
-  const outerX = Math.max(0, Math.min(385, stage.clientWidth / 2 - hitRadius - 7));
-  const outerY = Math.max(0, Math.min(248, stage.clientHeight / 2 - hitRadius - 8));
+  const outerX = Math.max(0, Math.min(orbitSettings.radiusX, stage.clientWidth / 2 - hitRadius - 7));
+  const outerY = Math.max(0, Math.min(orbitSettings.radiusY, stage.clientHeight / 2 - hitRadius - 8));
   const innerX = Math.min(outerX * 0.85, Math.max(outerX * 0.61, identity.offsetWidth / 2 + hitRadius + 12));
   const innerY = Math.min(outerY * 0.82, Math.max(outerY * 0.58, identity.offsetHeight / 2 + hitRadius + 12));
   for (const bubble of bubbles) {
-    const radiusX = innerX + (outerX - innerX) * bubble.spacing;
-    const radiusY = innerY + (outerY - innerY) * bubble.spacing;
+    const radiusX = outerX - (outerX - innerX) * (1 - bubble.spacing) * orbitSettings.ringGap;
+    const radiusY = outerY - (outerY - innerY) * (1 - bubble.spacing) * orbitSettings.ringGap;
     bubble.track = makeTrack(radiusX, radiusY);
     if (!bubble.pointer) {
       bubble.returning = null;
@@ -259,7 +261,8 @@ function spreadOrbits() {
 function spreadStep(bubble, elapsed) {
   const spread = bubble.spread;
   if (!spread) return 0;
-  const before = spread.time / spreadDuration;
+  const { spreadDuration } = orbitSettings;
+  const before = Math.min(spread.time / spreadDuration, 1);
   spread.time = Math.min(spread.time + elapsed, spreadDuration);
   const after = spread.time / spreadDuration;
   if (spread.time === spreadDuration) bubble.spread = null;
@@ -276,14 +279,14 @@ function animate(time) {
     if (bubble.pointer) continue;
 
     const focused = bubble.link.matches(':focus-visible');
-    const hovered = canHover.matches && bubble.link.matches(':hover');
+    const hovered = orbitSettings.holdOnHover && canHover.matches && bubble.link.matches(':hover');
     if (!bubble.returning && (focused || hovered)) {
       bubble.held = true;
       bubble.returning = null;
       continue;
     }
     const spacing = spreadStep(bubble, elapsed);
-    bubble.progress = (bubble.progress + elapsed / orbitPeriod + spacing + 1) % 1;
+    bubble.progress = (bubble.progress + elapsed * orbitSettings.direction / orbitSettings.orbitPeriod + spacing + 1) % 1;
     const target = destination(bubble);
     if (bubble.held && !bubble.returning) rejoin(bubble, target);
     bubble.held = false;
@@ -291,13 +294,13 @@ function animate(time) {
     if (bubble.returning) {
       const flight = bubble.returning;
       flight.time += elapsed;
-      const phase = springFrequency * flight.time;
-      const decay = Math.exp(-springDecay * flight.time);
+      const phase = flight.springFrequency * flight.time;
+      const decay = Math.exp(-flight.springDecay * flight.time);
       const cos = Math.cos(phase);
       const sin = Math.sin(phase);
       bubble.x = target.x + decay * (flight.x * cos + flight.swingX * sin);
       bubble.y = target.y + decay * (flight.y * cos + flight.swingY * sin);
-      if (flight.time >= returnDuration) {
+      if (flight.time >= flight.returnDuration) {
         bubble.returning = null;
         Object.assign(bubble, target);
       }
@@ -339,3 +342,18 @@ motion.addEventListener('change', () => {
 });
 document.addEventListener('visibilitychange', syncAnimation);
 syncAnimation();
+
+
+// The lab can tune its own embedded copy. A normal page load uses the defaults above.
+if (window.parent !== window) {
+  window.addEventListener('dekrov:orbit-settings', ({ detail }) => {
+    const previousSpread = orbitSettings.spreadDuration;
+    Object.assign(orbitSettings, detail.physics);
+    if (previousSpread !== orbitSettings.spreadDuration) {
+      for (const bubble of bubbles) {
+        if (bubble.spread) bubble.spread.time *= orbitSettings.spreadDuration / previousSpread;
+      }
+    }
+    if (detail.layout) measure();
+  });
+}
