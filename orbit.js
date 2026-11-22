@@ -25,7 +25,7 @@ const canHover = matchMedia('(any-hover: hover)');
 const size = { width: 0, height: 0, radiusY: 0, hitRadius: 0 };
 let track = [];
 let trackLength = 0;
-let progress = 0;
+
 
 function makeTrack() {
   const radiusX = Math.max(0, Math.min(323, size.width / 2 - size.hitRadius - 6));
@@ -43,7 +43,17 @@ function makeTrack() {
 }
 
 function destination(bubble) {
-  const distance = ((progress + bubble.phase) % 1) * trackLength;
+  if (bubble.placement) {
+    const { x, y, angle } = bubble.placement;
+    const a = angle + bubble.progress * Math.PI * 2;
+    const radiusX = 13 + 1.8 * bubble.index;
+    const radiusY = 9 + 1.2 * bubble.index;
+    return {
+      x: x + radiusX * (Math.cos(a) - Math.cos(angle)),
+      y: y + radiusY * (Math.sin(a) - Math.sin(angle)),
+    };
+  }
+  const distance = ((bubble.progress + bubble.phase) % 1) * trackLength;
   let left = 0;
   let right = track.length - 1;
   while (right - left > 1) {
@@ -55,8 +65,8 @@ function destination(bubble) {
   const to = track[right];
   const amount = (distance - from.distance) / (to.distance - from.distance || 1);
   return {
-    x: from.x + (to.x - from.x) * amount,
-    y: from.y + (to.y - from.y) * amount,
+    x: (from.x + (to.x - from.x) * amount) * bubble.radius,
+    y: (from.y + (to.y - from.y) * amount) * bubble.radius,
   };
 }
 
@@ -74,6 +84,28 @@ function render(bubble) {
 function offsetAt(offset, velocity, time) {
   // Critically damped spring around the moving point, with the release velocity as its initial condition.
   return (offset + (velocity + springRate * offset) * time) * Math.exp(-springRate * time);
+}
+
+function choosePlacement(bubble) {
+  const clearance = Math.max(36, size.hitRadius * 1.65);
+  const free = (x, y) => bubbles.every(other => other === bubble ||
+    Math.hypot(x - other.x, y - other.y) >= clearance);
+  const inside = (x, y) => Math.abs(x) <= size.width / 2 && Math.abs(y) <= size.height / 2;
+  const atDrop = { x: bubble.x, y: bubble.y, angle: bubble.x < 0 ? Math.PI : 0 };
+  if (free(atDrop.x, atDrop.y)) return atDrop;
+
+  // Look just around the drop point if another link already occupies it.
+  for (const radius of [clearance / 2, clearance]) {
+    for (let direction = 0; direction < 8; direction++) {
+      const a = direction * Math.PI / 4;
+      const x = atDrop.x + radius * Math.cos(a);
+      const y = atDrop.y + radius * Math.sin(a);
+      if (free(x, y) && (!inside(atDrop.x, atDrop.y) || inside(x, y))) {
+        return { x, y, angle: x < 0 ? Math.PI : 0 };
+      }
+    }
+  }
+  return atDrop;
 }
 
 function rejoin(bubble, target, vx = 0, vy = 0) {
@@ -96,7 +128,8 @@ const bubbles = cards.map((card, index) => {
   navigation.append(link);
 
   const bubble = {
-    link, label, phase: index / cards.length,
+    link, label, index, phase: index / cards.length, progress: 0,
+    radius: 0.89 + 0.11 * index / Math.max(cards.length - 1, 1), placement: null,
     x: 0, y: 0, pointer: null, returning: null, held: false, blockClick: false,
   };
   link.addEventListener('pointerdown', (event) => {
@@ -120,10 +153,8 @@ const bubbles = cards.map((card, index) => {
       link.classList.add('is-dragging');
     }
 
-    const maxX = Math.max(0, size.width / 2 - size.hitRadius);
-    const maxY = Math.max(0, size.height / 2 - size.hitRadius);
-    const x = Math.max(-maxX, Math.min(maxX, bubble.x + dx));
-    const y = Math.max(-maxY, Math.min(maxY, bubble.y + dy));
+    const x = bubble.x + dx;
+    const y = bubble.y + dy;
     const elapsed = Math.max(12, event.timeStamp - pointer.time);
     pointer.vx = Math.max(-0.65, Math.min(0.65, (x - bubble.x) / elapsed));
     pointer.vy = Math.max(-0.65, Math.min(0.65, (y - bubble.y) / elapsed));
@@ -139,6 +170,11 @@ const bubbles = cards.map((card, index) => {
     if (!pointer || pointer.id !== event.pointerId) return;
     bubble.pointer = null;
     link.classList.remove('is-dragging');
+    if (pointer.moved) {
+      bubble.placement = choosePlacement(bubble);
+      bubble.progress = 0;
+      bubble.held = false;
+    }
     const target = destination(bubble);
     const flick = event.type === 'pointerup' && pointer.moved && event.timeStamp - pointer.time < 85;
     if (motion.matches) {
@@ -160,6 +196,8 @@ const bubbles = cards.map((card, index) => {
 });
 
 function measure() {
+  const previousWidth = size.width;
+  const previousHeight = size.height;
   size.width = stage.clientWidth;
   size.height = stage.clientHeight;
   size.hitRadius = (bubbles[0]?.link.offsetWidth || 0) / 2;
@@ -167,6 +205,10 @@ function measure() {
   for (const bubble of bubbles) {
     bubble.labelWidth = bubble.label.offsetWidth;
     if (!bubble.pointer) {
+      if (bubble.placement && previousWidth && previousHeight) {
+        bubble.placement.x *= size.width / previousWidth;
+        bubble.placement.y *= size.height / previousHeight;
+      }
       bubble.returning = null;
       Object.assign(bubble, destination(bubble));
     }
@@ -187,12 +229,10 @@ function animate(time) {
   animationFrame = 0;
   const elapsed = previousTime ? Math.min(50, time - previousTime) : 0;
   previousTime = time;
-  progress = (progress + elapsed / orbitPeriod) % 1;
 
   for (const bubble of bubbles) {
     if (bubble.pointer) continue;
 
-    const target = destination(bubble);
     const focused = bubble.link.matches(':focus-visible');
     const hovered = canHover.matches && bubble.link.matches(':hover');
     if (!bubble.returning && (focused || hovered)) {
@@ -200,6 +240,9 @@ function animate(time) {
       bubble.returning = null;
       continue;
     }
+    const period = bubble.placement ? 4200 + 260 * bubble.index : orbitPeriod;
+    bubble.progress = (bubble.progress + elapsed / period) % 1;
+    const target = destination(bubble);
     if (bubble.held && !bubble.returning) rejoin(bubble, target);
     bubble.held = false;
 
