@@ -204,7 +204,7 @@ const bubbles = cards.map((card, index) => {
       const age = Math.max(0, event.timeStamp - pointer.time);
       const speed = Math.hypot(pointer.vx, pointer.vy);
       const carry = event.type === 'pointerup' && age < 100 && speed > 0
-        ? Math.min(1.55 / speed, Math.exp(-age / 40))
+        ? 1.16 * Math.min(1.55 / speed, Math.exp(-age / 40))
         : 0;
       rejoin(bubble, target, { x: pointer.vx * carry, y: pointer.vy * carry });
       spreadPending = true;
