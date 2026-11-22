@@ -1,7 +1,6 @@
 const cards = Array.from(document.querySelectorAll('.link-card'));
 const stage = document.querySelector('#orbit-stage');
 const navigation = document.querySelector('#orbit-links');
-const guides = document.querySelector('#orbit-guides');
 const identity = stage.querySelector('.identity');
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -21,10 +20,13 @@ if ('IntersectionObserver' in window && !motion.matches) {
   }
 }
 
+const orbitPeriod = 32000;
+const spreadDuration = 26000;
 const springRate = 0.0058;
 const returnDuration = 1600;
 const canHover = matchMedia('(any-hover: hover)');
 let hitRadius = 0;
+let spreadPending = false;
 
 function makeTrack(radiusX, radiusY) {
   let length = 0;
@@ -129,13 +131,9 @@ const bubbles = cards.map((card, index) => {
   link.append(card.querySelector('.link-icon').cloneNode(true), preview);
   navigation.append(link);
 
-  const guide = document.createElement('span');
-  guide.className = 'orbit-guide';
-  guides.append(guide);
-
   const bubble = {
-    link, guide, progress: index / cards.length,
-    spacing: index / Math.max(cards.length - 1, 1), period: 24000 + 3400 * index,
+    link, progress: index / cards.length,
+    spacing: index / Math.max(cards.length - 1, 1), spread: null,
     x: 0, y: 0, pointer: null, returning: null, held: false, blockClick: false,
   };
   link.addEventListener('pointerdown', (event) => {
@@ -155,6 +153,7 @@ const bubbles = cards.map((card, index) => {
     if (!pointer.moved) {
       if (Math.hypot(dx, dy) < 7) return;
       pointer.moved = true;
+      bubble.spread = null;
       bubble.blockClick = true;
       link.classList.add('is-dragging');
     }
@@ -187,6 +186,7 @@ const bubbles = cards.map((card, index) => {
       render(bubble);
     } else if (pointer.moved) {
       rejoin(bubble, target, flick ? pointer.vx * 0.55 : 0, flick ? pointer.vy * 0.55 : 0);
+      spreadPending = true;
     } else {
       bubble.held = true;
     }
@@ -210,8 +210,6 @@ function measure() {
     const radiusX = innerX + (outerX - innerX) * bubble.spacing;
     const radiusY = innerY + (outerY - innerY) * bubble.spacing;
     bubble.track = makeTrack(radiusX, radiusY);
-    bubble.guide.style.width = `${radiusX * 2}px`;
-    bubble.guide.style.height = `${radiusY * 2}px`;
     if (!bubble.pointer) {
       bubble.returning = null;
       Object.assign(bubble, destination(bubble));
@@ -229,6 +227,27 @@ let visible = true;
 let animationFrame = 0;
 let previousTime = 0;
 
+function spreadOrbits() {
+  // Keep the current circular order and move the group as little as possible.
+  const ordered = [...bubbles].sort((a, b) => a.progress - b.progress);
+  const count = ordered.length;
+  const mean = ordered.reduce((sum, bubble, index) => sum + bubble.progress - index / count, 0) / count;
+  ordered.forEach((bubble, index) => {
+    bubble.spread = { distance: mean + index / count - bubble.progress, time: 0 };
+  });
+}
+
+function spreadStep(bubble, elapsed) {
+  const spread = bubble.spread;
+  if (!spread) return 0;
+  const before = spread.time / spreadDuration;
+  spread.time = Math.min(spread.time + elapsed, spreadDuration);
+  const after = spread.time / spreadDuration;
+  if (spread.time === spreadDuration) bubble.spread = null;
+  const ease = (t) => t * t * (3 - 2 * t);
+  return spread.distance * (ease(after) - ease(before));
+}
+
 function animate(time) {
   animationFrame = 0;
   const elapsed = previousTime ? Math.min(50, time - previousTime) : 0;
@@ -244,7 +263,8 @@ function animate(time) {
       bubble.returning = null;
       continue;
     }
-    bubble.progress = (bubble.progress + elapsed / bubble.period) % 1;
+    const spacing = spreadStep(bubble, elapsed);
+    bubble.progress = (bubble.progress + elapsed / orbitPeriod + spacing + 1) % 1;
     const target = destination(bubble);
     if (bubble.held && !bubble.returning) rejoin(bubble, target);
     bubble.held = false;
@@ -264,6 +284,10 @@ function animate(time) {
     render(bubble);
   }
 
+  if (spreadPending && !bubbles.some(bubble => bubble.pointer || bubble.returning)) {
+    spreadPending = false;
+    spreadOrbits();
+  }
   syncAnimation();
 }
 
@@ -283,7 +307,11 @@ if ('IntersectionObserver' in window) {
   }).observe(stage);
 }
 motion.addEventListener('change', () => {
-  if (motion.matches) measure();
+  if (motion.matches) {
+    spreadPending = false;
+    for (const bubble of bubbles) bubble.spread = null;
+    measure();
+  }
   syncAnimation();
 });
 document.addEventListener('visibilitychange', syncAnimation);
