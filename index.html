@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#070707">
+  <meta name="theme-color" content="#090909">
   <meta name="color-scheme" content="dark">
   <meta name="description" content="All official Dekrov links in one place. Portfolio, GitHub, X, Telegram and contact.">
   <meta property="og:type" content="website">
@@ -12,38 +12,28 @@
   <meta property="og:image" content="https://dekrov.com/assets/favicon-dk.png">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Dekrov — Links</title>
-  <link rel="icon" type="image/png" href="https://dekrov.com/assets/favicon-dk.png">
+  <link rel="icon" type="image/webp" href="./assets/dekrov.webp">
   <link rel="stylesheet" href="./style.css">
+  <script src="./orbit.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#links">Skip to links</a>
-  <div class="background-grid" aria-hidden="true"></div>
-  <div class="background-glow" aria-hidden="true"></div>
-
-  <div class="shell">
-    <header class="topbar">
-      <a class="wordmark" href="https://dekrov.com/" aria-label="Dekrov homepage">
-        <span class="wordmark-symbol" aria-hidden="true">D<span>K</span></span>
-        <span>DEKROV<span class="wordmark-point">.</span></span>
-      </a>
-      <span class="topbar-meta"><span class="status-light" aria-hidden="true"></span> OFFICIAL LINKS</span>
-    </header>
-
-    <main>
-      <section class="intro" aria-labelledby="page-title">
-        <div class="avatar-frame">
-          <img src="https://dekrov.com/assets/favicon-dk.png" width="88" height="88" alt="Dekrov emblem">
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div class="orbit-stage" id="orbit-stage">
+        <div class="identity">
+          <img class="avatar" src="./assets/dekrov.webp" width="112" height="112" alt="">
+          <h1 id="page-title">DEKROV</h1>
+          <p class="intro-description">Building tools, interfaces and automation.<br>Find all my official places on the internet.</p>
         </div>
-        <p class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> DEVELOPER / AUTOMATION / AI</p>
-        <h1 id="page-title">DEKROV<span class="title-period">.</span></h1>
-        <p class="intro-description">Building tools, interfaces and automation.<br>Find all my official places on the internet.</p>
-      </section>
+        <nav id="orbit-links" class="orbit-links" aria-label="Orbit links" hidden></nav>
+      </div>
+      <a class="directory-jump" href="#links">Links <span aria-hidden="true">↓</span></a>
+    </section>
 
+    <div class="shell">
       <section class="directory" id="links" aria-label="Official links">
-        <div class="directory-heading">
-          <span><span class="section-number">01 /</span> THE DIRECTORY</span>
-          <span class="directory-count">06 DESTINATIONS</span>
-        </div>
+        <h2 class="directory-heading">Official links</h2>
 
         <!-- Add or reorder links below. Each card is a plain HTML anchor. -->
         <a class="link-card" href="https://dekrov.com/" target="_blank" rel="noopener noreferrer" aria-label="Visit Dekrov portfolio">
@@ -92,14 +82,11 @@
           <span class="link-action" aria-hidden="true">↗</span>
         </a>
 
-        <p class="postscript"><span class="postscript-line" aria-hidden="true"></span> ONE LINK. EVERYWHERE.</p>
       </section>
-    </main>
-
-    <footer class="footer">
+      <footer class="footer">
       <span>© 2026 DEKROV</span>
-      <span>INDEPENDENT BY DESIGN <span class="footer-star" aria-hidden="true">✳</span></span>
-    </footer>
-  </div>
+      </footer>
+    </div>
+  </main>
 </body>
 </html>
