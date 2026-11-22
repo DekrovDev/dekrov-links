@@ -22,9 +22,9 @@ if ('IntersectionObserver' in window && !motion.matches) {
 
 const orbitPeriod = 32000;
 const spreadDuration = 26000;
-const springRate = 0.0058;
-const returnDuration = 1600;
-const glideDecay = 115;
+const springDecay = 0.0046;
+const springFrequency = 0.0058;
+const returnDuration = 1800;
 const canHover = matchMedia('(any-hover: hover)');
 let hitRadius = 0;
 let spreadPending = false;
@@ -71,9 +71,11 @@ function render(bubble) {
   link.classList.toggle('preview-left', x > 0);
 }
 
-function offsetAt(offset, velocity, time) {
-  // Critically damped spring around the moving point, with the release velocity as its initial condition.
-  return (offset + (velocity + springRate * offset) * time) * Math.exp(-springRate * time);
+function returnScale(time) {
+  // A damped spring starting at rest briefly overshoots the orbit before settling.
+  const phase = springFrequency * time;
+  return Math.exp(-springDecay * time) *
+    (Math.cos(phase) + (springDecay / springFrequency) * Math.sin(phase));
 }
 
 function nearestOrbitProgress(bubble) {
@@ -113,29 +115,8 @@ function nearestOrbitProgress(bubble) {
   return bestProgress;
 }
 
-function rejoin(bubble, target, vx = 0, vy = 0) {
-  bubble.returning = { x: bubble.x - target.x, y: bubble.y - target.y, vx, vy, time: 0 };
-}
-
-function returnFromDrop(bubble, vx = 0, vy = 0) {
-  bubble.progress = nearestOrbitProgress(bubble);
-  bubble.held = false;
-  rejoin(bubble, destination(bubble), vx, vy);
-  spreadPending = true;
-}
-
-function glideStep(bubble, elapsed) {
-  const glide = bubble.glide;
-  glide.time = Math.min(glide.time + elapsed, glide.duration);
-  const velocityScale = Math.exp(-glide.time / glideDecay);
-  const distance = glideDecay * (1 - velocityScale);
-  bubble.x = glide.x + glide.vx * distance;
-  bubble.y = glide.y + glide.vy * distance;
-  render(bubble);
-  if (glide.time === glide.duration) {
-    bubble.glide = null;
-    returnFromDrop(bubble, glide.vx * velocityScale, glide.vy * velocityScale);
-  }
+function rejoin(bubble, target) {
+  bubble.returning = { x: bubble.x - target.x, y: bubble.y - target.y, time: 0 };
 }
 
 const bubbles = cards.map((card, index) => {
@@ -156,15 +137,13 @@ const bubbles = cards.map((card, index) => {
   const bubble = {
     link, progress: index / cards.length,
     spacing: index / Math.max(cards.length - 1, 1), spread: null,
-    x: 0, y: 0, pointer: null, glide: null, returning: null, held: false, blockClick: false,
+    x: 0, y: 0, pointer: null, returning: null, held: false, blockClick: false,
   };
   link.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 || !event.isPrimary || bubble.pointer) return;
     bubble.blockClick = false;
     bubble.returning = null;
-    bubble.glide = null;
-    bubble.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY,
-      time: event.timeStamp, vx: 0, vy: 0, moved: false };
+    bubble.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
     link.setPointerCapture(event.pointerId);
   });
   link.addEventListener('pointermove', (event) => {
@@ -183,13 +162,8 @@ const bubbles = cards.map((card, index) => {
 
     const x = bubble.x + dx;
     const y = bubble.y + dy;
-    const elapsed = Math.max(12, event.timeStamp - pointer.time);
-    const blend = 1 - Math.exp(-elapsed / 32);
-    pointer.vx += (dx / elapsed - pointer.vx) * blend;
-    pointer.vy += (dy / elapsed - pointer.vy) * blend;
     pointer.x = event.clientX;
     pointer.y = event.clientY;
-    pointer.time = event.timeStamp;
     Object.assign(bubble, { x, y });
     render(bubble);
   });
@@ -204,25 +178,15 @@ const bubbles = cards.map((card, index) => {
       return;
     }
 
+    bubble.progress = nearestOrbitProgress(bubble);
+    bubble.held = false;
+    const target = destination(bubble);
     if (motion.matches) {
-      bubble.progress = nearestOrbitProgress(bubble);
-      Object.assign(bubble, destination(bubble));
+      Object.assign(bubble, target);
       render(bubble);
-      return;
-    }
-
-    const stale = Math.max(0, event.timeStamp - pointer.time);
-    const canGlide = event.type === 'pointerup' && stale < 85;
-    const speed = Math.hypot(pointer.vx, pointer.vy);
-    const releaseSpeed = Math.min(1.45, speed * Math.exp(-stale / 55));
-    if (canGlide && releaseSpeed >= 0.22) {
-      const scale = releaseSpeed / speed;
-      bubble.glide = {
-        x: bubble.x, y: bubble.y, vx: pointer.vx * scale, vy: pointer.vy * scale,
-        time: 0, duration: Math.min(360, glideDecay * Math.log(releaseSpeed / 0.08)),
-      };
     } else {
-      returnFromDrop(bubble);
+      rejoin(bubble, target);
+      spreadPending = true;
     }
   }
 
@@ -244,7 +208,7 @@ function measure() {
     const radiusX = innerX + (outerX - innerX) * bubble.spacing;
     const radiusY = innerY + (outerY - innerY) * bubble.spacing;
     bubble.track = makeTrack(radiusX, radiusY);
-    if (!bubble.pointer && !bubble.glide) {
+    if (!bubble.pointer) {
       bubble.returning = null;
       Object.assign(bubble, destination(bubble));
     }
@@ -289,10 +253,6 @@ function animate(time) {
 
   for (const bubble of bubbles) {
     if (bubble.pointer) continue;
-    if (bubble.glide) {
-      glideStep(bubble, elapsed);
-      continue;
-    }
 
     const focused = bubble.link.matches(':focus-visible');
     const hovered = canHover.matches && bubble.link.matches(':hover');
@@ -310,8 +270,9 @@ function animate(time) {
     if (bubble.returning) {
       const flight = bubble.returning;
       flight.time += elapsed;
-      bubble.x = target.x + offsetAt(flight.x, flight.vx, flight.time);
-      bubble.y = target.y + offsetAt(flight.y, flight.vy, flight.time);
+      const scale = returnScale(flight.time);
+      bubble.x = target.x + flight.x * scale;
+      bubble.y = target.y + flight.y * scale;
       if (flight.time >= returnDuration) {
         bubble.returning = null;
         Object.assign(bubble, target);
@@ -322,7 +283,7 @@ function animate(time) {
     render(bubble);
   }
 
-  if (spreadPending && !bubbles.some(bubble => bubble.pointer || bubble.glide || bubble.returning)) {
+  if (spreadPending && !bubbles.some(bubble => bubble.pointer || bubble.returning)) {
     spreadPending = false;
     spreadOrbits();
   }
@@ -347,11 +308,7 @@ if ('IntersectionObserver' in window) {
 motion.addEventListener('change', () => {
   if (motion.matches) {
     spreadPending = false;
-    for (const bubble of bubbles) {
-      bubble.spread = null;
-      if (bubble.glide) bubble.progress = nearestOrbitProgress(bubble);
-      bubble.glide = null;
-    }
+    for (const bubble of bubbles) bubble.spread = null;
     measure();
   }
   syncAnimation();
