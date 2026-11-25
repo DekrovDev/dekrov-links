@@ -6,12 +6,12 @@
 body { font-family:var(--lab-font, Montserrat, "Segoe UI", Arial, sans-serif); }
 .intro {
   min-height:max(calc(var(--lab-hero-height, 1) * 100svh), 510px);
-  background:radial-gradient(ellipse at 50% 43%, var(--lab-ambient, transparent), transparent 58%);
+  background:radial-gradient(ellipse at 50% var(--lab-ambient-y, 43%), var(--lab-ambient, transparent), transparent var(--lab-ambient-radius, 58%));
 }
 .avatar {
   width:calc(clamp(83px, 12vw, 112px) * var(--lab-logo-scale, 1));
   border-radius:var(--lab-logo-radius, 24%);
-  box-shadow:0 0 var(--lab-logo-glow, 0px) var(--lab-glow-color, #ffffff);
+  box-shadow:0 0 var(--lab-logo-glow, 0px) var(--lab-logo-glow-color, var(--lab-glow-color, #ffffff));
 }
 h1 { font-size:calc(clamp(44px, 7vw, 70px) * var(--lab-title-scale, 1)); }
 .intro-description { color:var(--lab-muted, #a4a4a4); }

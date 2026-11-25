@@ -13,8 +13,8 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Dekrov — Links</title>
   <link rel="icon" type="image/webp" href="./assets/dekrov.webp">
-  <link rel="stylesheet" href="./style.css?v=8">
-  <script src="./orbit.js?v=11" defer></script>
+  <link rel="stylesheet" href="./style.css?v=46">
+  <script src="./orbit.js?v=50" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#links">Skip to links</a>
@@ -22,24 +22,54 @@
     <section class="intro" aria-labelledby="page-title">
       <div class="orbit-stage" id="orbit-stage">
         <div class="identity">
-          <img class="avatar" src="./assets/dekrov.webp" width="112" height="112" alt="">
+          <div class="avatar-wrap">
+            <div class="avatar">
+              <img class="avatar-img" src="./assets/dekrov.webp" width="112" height="112" alt="Dekrov Avatar">
+              <span class="avatar-spotlight" aria-hidden="true"></span>
+              <span class="avatar-ray avatar-ray-a" aria-hidden="true"></span>
+            </div>
+          </div>
+          <svg width="0" height="0" aria-hidden="true" style="position:absolute;pointer-events:none;">
+            <filter id="dk-wave-filter" x="-15%" y="-15%" width="130%" height="130%">
+              <feTurbulence id="dk-wave-turb" type="fractalNoise" baseFrequency="0.022 0.04" numOctaves="1" seed="3" result="noise"/>
+              <feDisplacementMap id="dk-wave-disp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+          </svg>
           <h1 id="page-title">DEKROV</h1>
           <p class="intro-description">Building tools, interfaces and automation.<br>Find all my official places on the internet.</p>
         </div>
         <nav id="orbit-links" class="orbit-links" aria-label="Orbit links" hidden></nav>
       </div>
-      <a class="directory-jump" href="#links">Links <span aria-hidden="true">↓</span></a>
+      <a class="scroll-cue" href="#links" aria-label="Scroll to links">
+        <svg class="scroll-cue-svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <defs>
+            <linearGradient id="scroll-cue-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#b7bdc8"/>
+              <stop offset="28%" stop-color="#ffffff"/>
+              <stop offset="52%" stop-color="#8d93a1"/>
+              <stop offset="76%" stop-color="#f2f5fa"/>
+              <stop offset="100%" stop-color="#aeb5c2"/>
+            </linearGradient>
+          </defs>
+          <g class="scroll-cue-base" fill="none" stroke="#343434" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4V18M7 13L12 18L17 13"/>
+          </g>
+          <g class="scroll-cue-lit" fill="none" stroke="url(#scroll-cue-metal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4V18M7 13L12 18L17 13"/>
+          </g>
+        </svg>
+      </a>
     </section>
 
     <div class="shell">
       <section class="directory" id="links" aria-label="Official links">
-        <h2 class="directory-heading">Official links</h2>
+        <h2 class="directory-heading">LINK3 DEKROV</h2>
 
         <!-- Add or reorder links below. Each card is a plain HTML anchor. -->
         <a class="link-card" href="https://dekrov.com/" target="_blank" rel="noopener noreferrer" aria-label="Visit Dekrov portfolio">
           <span class="link-icon" aria-hidden="true">
             <img class="icon-default" src="./assets/icons/website.svg?v=2" width="40" height="40" alt="" draggable="false">
-            <img class="icon-hover" src="./assets/icons/website-hover.svg?v=2" width="40" height="40" alt="" draggable="false">
+            <img class="icon-hover" src="./assets/icons/website-hover.svg?v=3" width="40" height="40" alt="" draggable="false">
           </span>
           <span class="link-copy"><strong>Website</strong><small>Portfolio &amp; everything I build</small></span>
           <span class="link-action" aria-hidden="true"><img src="./assets/icons/arrow.svg" width="24" height="24" alt=""></span>
@@ -84,7 +114,7 @@
         <a class="link-card" href="mailto:contact@dekrov.com" aria-label="Email Dekrov">
           <span class="link-icon" aria-hidden="true">
             <img class="icon-default" src="./assets/icons/email.svg?v=2" width="40" height="40" alt="" draggable="false">
-            <img class="icon-hover" src="./assets/icons/email-hover.svg?v=2" width="40" height="40" alt="" draggable="false">
+            <img class="icon-hover" src="./assets/icons/email-hover.svg?v=3" width="40" height="40" alt="" draggable="false">
           </span>
           <span class="link-copy"><strong>Email</strong><small>contact@dekrov.com</small></span>
           <span class="link-action" aria-hidden="true"><img src="./assets/icons/arrow.svg" width="24" height="24" alt=""></span>
