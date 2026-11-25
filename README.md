@@ -1,6 +1,6 @@
 # Dekrov — Links
 
-Interactive links hub with orbital icon physics, 4K liquid-glass `DK` avatar, and smooth scroll & card animations.
+All my official, up-to-date links in one place.
 
 Live: [links.dekrov.com](https://links.dekrov.com)
 
